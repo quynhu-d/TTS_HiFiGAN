@@ -47,7 +47,7 @@ class ResBlock(nn.Module):
             else:
                 out = F.leaky_relu(x, self.leaky_relu_slope)
                 out = conv_tuple(out)
-            x += out
+            x = x + out
         return x
 
     def _get_padding(self, kernel_r, dilation_r):
@@ -93,7 +93,7 @@ class Generator(nn.Module):
             ],  # D_r
             leaky_relu_slope: float = 0.1
     ):
-        super(Generator, self).__init__()
+        super().__init__()
         self.leaky_relu_slope = leaky_relu_slope
         self.conv_in = nn.Conv1d(in_ch, hidden_ch, 7, dilation=1, padding=3)
         upsample_layers = []
@@ -115,7 +115,7 @@ class Generator(nn.Module):
         x = F.leaky_relu(x, self.leaky_relu_slope)
         x = self.conv_out(x)
         x = torch.tanh(x)
-        return x
+        return x.squeeze(1)
 
 
 if __name__ == '__main__':
