@@ -4,24 +4,25 @@ import torchaudio
 
 class LJSpeechDataset(torchaudio.datasets.LJSPEECH):
 
-    def __init__(self, root):
+    def __init__(self, root, segment_size=8192):
         super().__init__(root=root)
-        self._tokenizer = torchaudio.pipelines.TACOTRON2_GRIFFINLIM_CHAR_LJSPEECH.get_text_processor()
+        # self._tokenizer = torchaudio.pipelines.TACOTRON2_GRIFFINLIM_CHAR_LJSPEECH.get_text_processor()
+        self.segment_size = segment_size
 
     def __getitem__(self, index: int):
         waveform, _, _, transcript = super().__getitem__(index)
         waveform_length = torch.tensor([waveform.shape[-1]]).int()
 
-        tokens, token_lengths = self._tokenizer(transcript)
+        # tokens, token_lengths = self._tokenizer(transcript)
 
-        return waveform, waveform_length, transcript, tokens, token_lengths
+        return waveform, waveform_length, transcript, self.segment_size
 
-    def decode(self, tokens, lengths):
-        result = []
-        for tokens_, length in zip(tokens, lengths):
-            text = "".join([
-                self._tokenizer.tokens[token]
-                for token in tokens_[:length]
-            ])
-            result.append(text)
-        return result
+    # def decode(self, tokens, lengths):
+    #     result = []
+    #     for tokens_, length in zip(tokens, lengths):
+    #         text = "".join([
+    #             self._tokenizer.tokens[token]
+    #             for token in tokens_[:length]
+    #         ])
+    #         result.append(text)
+    #     return result
