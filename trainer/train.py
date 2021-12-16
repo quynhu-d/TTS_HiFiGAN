@@ -10,6 +10,9 @@ import errno
 import os
 from typing import Tuple
 from tqdm.auto import tqdm, trange
+from .utils import plot_spectrogram_to_buf
+import PIL
+from torchvision.transforms import ToTensor
 
 
 def train(
@@ -76,10 +79,12 @@ def train(
 
             idx = np.random.randint(batch.mel.shape[0])
             if logging:
+                wandb_mel_true = ToTensor()(PIL.Image.open(plot_spectrogram_to_buf(batch.mel[idx])))
+                wandb_mel_pred = ToTensor()(PIL.Image.open(plot_spectrogram_to_buf(pred_mel[idx])))
                 wandb.log({
                     'mel_loss': mel_loss,
-                    'mel': wandb.Image(batch.mel[idx]),
-                    'mel_pred': wandb.Image(pred_mel[idx]),
+                    'mel': wandb.Image(wandb_mel_true),
+                    'mel_pred': wandb.Image(wandb_mel_pred),
                     'audio': wandb.Audio(batch.waveform[idx].detach().cpu().numpy(),
                                          sample_rate=MelSpectrogramConfig.sr),
                     'audio_pred': wandb.Audio(pred_wav[idx].detach().cpu().numpy(),
