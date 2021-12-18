@@ -44,12 +44,12 @@ def train(
     gen.train()
     print('Generator model', gen, sep='\n')
 
-    mpd = MPDiscriminator()
+    mpd = MPDiscriminator().to(device)
     if train_config.model_cp_path is not None and (train_config.last_epoch != -1):
         mpd.load_state_dict(torch.load(train_config.model_cp_path + 'mpd.pth', device))
     mpd.train()
     print('MPD model', mpd, sep='\n')
-    msd = MSDiscriminator()
+    msd = MSDiscriminator().to(device)
     if train_config.model_cp_path is not None and (train_config.last_epoch != -1):
         msd.load_state_dict(torch.load(train_config.model_cp_path + 'msd.pth', device))
     msd.train()
