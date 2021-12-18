@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 
 def get_d_loss(gen, disc, batch, device='cpu'):
