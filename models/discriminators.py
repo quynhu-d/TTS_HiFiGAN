@@ -1,5 +1,6 @@
 from typing import List
 
+import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.nn.utils import weight_norm, spectral_norm
@@ -156,3 +157,18 @@ class MPDiscriminator(nn.Module):
             return outputs, ft_maps
         else:
             return outputs
+
+
+if __name__ == '__main__':
+    x = torch.randn(3, 400)
+    print(MPDiscriminator())
+    print(dict(MPDiscriminator().named_parameters()).keys())
+    print(MSDiscriminator())
+    print(dict(MSDiscriminator().named_parameters()).keys())
+    output_s, ft_maps_s = MSDiscriminator()(x)
+    output_p, ft_maps_p = MPDiscriminator()(x)
+
+    output_s_ = MSDiscriminator()(x, return_ft=False)
+    output_p_ = MPDiscriminator()(x, return_ft=False)
+    # print(output, ft_maps)
+    # print(output[0].shape, ft_maps[2][0].shape)
