@@ -1,8 +1,9 @@
 import errno
+import itertools
 import os
 
-from PIL import Image
 import wandb
+from PIL import Image
 from torch.utils.data import DataLoader
 from torchvision.transforms import ToTensor
 from tqdm.auto import trange, tqdm
@@ -56,10 +57,16 @@ def train(
     print('MSD model', msd, sep='\n')
 
     opt_g = torch.optim.AdamW(gen.parameters(), 2e-4, (.8, .99), weight_decay=.01)
+    if train_config.model_cp_path is not None and (train_config.last_epoch != -1):
+        opt_g.load_state_dict(torch.load(train_config.model_cp_path + 'opt_g.pth', device))
     sch_g = torch.optim.lr_scheduler.ExponentialLR(opt_g, gamma=.999, last_epoch=train_config.last_epoch)
 
-    opt_d = torch.optim.AdamW(gen.parameters(), 2e-4, (.8, .99), weight_decay=.01)
-    sch_d = torch.optim.lr_scheduler.ExponentialLR(opt_g, gamma=.999, last_epoch=train_config.last_epoch)
+    d_params = [mpd.parameters(), msd.parameters()]
+    d_params = itertools.chain(*d_params)
+    opt_d = torch.optim.AdamW(d_params, 2e-4, (.8, .99), weight_decay=.01)
+    if train_config.model_cp_path is not None and (train_config.last_epoch != -1):
+        opt_d.load_state_dict(torch.load(train_config.model_cp_path + 'opt_d.pth', device))
+    sch_d = torch.optim.lr_scheduler.ExponentialLR(opt_d, gamma=.999, last_epoch=train_config.last_epoch)
 
     total_config = {**train_config.__dict__, **mel_config.__dict__}
     if logging:
@@ -157,6 +164,8 @@ def train(
                 torch.save(gen.state_dict(), model_path + '/gen.pth')
                 torch.save(mpd.state_dict(), model_path + '/mpd.pth')
                 torch.save(msd.state_dict(), model_path + '/msd.pth')
+                torch.save(opt_g.state_dict(), model_path + '/opt_g.pth')
+                torch.save(opt_d.state_dict(), model_path + '/opt_d.pth')
 
             if train_config.overfit:
                 break
@@ -166,5 +175,6 @@ def train(
     torch.save(gen.state_dict(), model_path + '/gen.pth')
     torch.save(mpd.state_dict(), model_path + '/mpd.pth')
     torch.save(msd.state_dict(), model_path + '/msd.pth')
-
+    torch.save(opt_g.state_dict(), model_path + '/opt_g.pth')
+    torch.save(opt_d.state_dict(), model_path + '/opt_d.pth')
     return gen, mpd, msd
