@@ -1,1 +1,1 @@
-from .loss import *
+from .get_loss import *
