@@ -1,19 +1,18 @@
-import PIL
-import torch
-import torch.nn.functional as F
+import errno
+import os
+
+from PIL import Image
 import wandb
 from torch.utils.data import DataLoader
 from torchvision.transforms import ToTensor
 from tqdm.auto import trange, tqdm
-import errno
-import os
 
 from data import *
 from featurizer import *
 from loss import get_d_loss, get_g_loss, get_mel_loss
 from models import Generator, MPDiscriminator, MSDiscriminator, pad
-from trainer.utils import plot_spectrogram_to_buf
 from trainer.train_config import TrainConfig
+from trainer.utils import plot_spectrogram_to_buf
 
 
 def train(
@@ -73,7 +72,7 @@ def train(
             batch.to(device)
             batch.mel = featurizer(batch.waveform).to(device)
             y_fake = gen(batch.mel)
-            y_fake, y_real = pad(y_fake, y_real)
+            y_fake, y_real = pad(y_fake, batch.waveform)
 
             # Discriminators
             opt_d.zero_grad()
@@ -100,7 +99,7 @@ def train(
             msd.requires_grad = False
             g_msd_loss, g_msd_losses = get_g_loss(msd, y_fake, y_real)
 
-            g_mel_loss = get_mel_loss(y_fake, y_real)
+            g_mel_loss = get_mel_loss(y_fake, y_real, featurizer)
 
             g_loss = g_mpd_loss + g_msd_loss + g_mel_loss * 45
             g_loss.backward()
@@ -111,8 +110,8 @@ def train(
                 idx = np.random.randint(batch.mel.shape[0])
                 buf_true = plot_spectrogram_to_buf(batch.mel[idx].detach().cpu().numpy())
                 buf_pred = plot_spectrogram_to_buf(mel_fake[idx].detach().cpu().numpy())
-                wandb_mel_real = ToTensor()(PIL.Image.open(buf_true))
-                wandb_mel_fake = ToTensor()(PIL.Image.open(buf_pred))
+                wandb_mel_real = ToTensor()(Image.open(buf_true))
+                wandb_mel_fake = ToTensor()(Image.open(buf_pred))
                 del buf_pred
                 del buf_true
                 wandb.log({
