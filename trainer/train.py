@@ -18,7 +18,7 @@ from trainer.train_config import TrainConfig
 
 def train(
         train_config: TrainConfig,
-        mel_config: MelSpectrogramConfig,
+        mel_config: MelSpectrogramConfig = MelSpectrogramConfig(),
         logging: bool = True
 ):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -45,12 +45,12 @@ def train(
     gen.train()
     print('Generator model', gen, sep='\n')
 
-    mpd = MPDiscriminator
+    mpd = MPDiscriminator()
     if train_config.model_cp_path is not None and (train_config.last_epoch != -1):
         mpd.load_state_dict(torch.load(train_config.model_cp_path + 'mpd.pth', device))
     mpd.train()
     print('MPD model', mpd, sep='\n')
-    msd = MSDiscriminator
+    msd = MSDiscriminator()
     if train_config.model_cp_path is not None and (train_config.last_epoch != -1):
         msd.load_state_dict(torch.load(train_config.model_cp_path + 'msd.pth', device))
     msd.train()
