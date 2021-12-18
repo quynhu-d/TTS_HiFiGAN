@@ -154,3 +154,5 @@ def train(
                 break
         sch_g.step()
         sch_d.step()
+
+    return gen, mpd, msd

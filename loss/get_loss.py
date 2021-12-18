@@ -23,7 +23,7 @@ def get_d_loss(disc, y_fake, y_real):
 
         d_adv = d_adv + d_r + d_f
 
-    return d_adv, {'real loss': d_real, 'fake_loss': d_fake}
+    return d_adv, {'real_loss': d_real, 'fake_loss': d_fake}
 
 
 def get_g_loss(disc, y_fake, y_real, lambda_fm=2):
