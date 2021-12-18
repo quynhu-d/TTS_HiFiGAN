@@ -78,11 +78,6 @@ class MSDiscriminator(nn.Module):
         else:
             return outputs
 
-    def to(self, device):
-        for disc in self.disc_layers:
-            disc.to(device)
-        self.pooling.to(device)
-
 
 class MPDSub(nn.Module):
     def __init__(
@@ -162,10 +157,6 @@ class MPDiscriminator(nn.Module):
             return outputs, ft_maps
         else:
             return outputs
-
-    def to(self, device):
-        for disc in self.disc_layers:
-            disc.to(device)
 
 
 if __name__ == '__main__':
