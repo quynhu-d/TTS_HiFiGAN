@@ -146,6 +146,7 @@ def train(
                     'audio_pred': wandb.Audio(y_fake[idx].detach().cpu().numpy(), sample_rate=MelSpectrogramConfig.sr),
                     'step': j
                 })
-            break
+            if train_config.overfit:
+                break
         sch_g.step()
         sch_d.step()

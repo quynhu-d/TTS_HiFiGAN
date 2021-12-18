@@ -18,10 +18,10 @@ def get_d_loss(disc, y_fake, y_real):
     for d_r, d_f in zip(d_out_real, d_out_fake):
         d_r = torch.mean((d_r - 1) ** 2)
         d_f = torch.mean(d_f ** 2)
-        d_real += d_r.item()
-        d_fake += d_f.item()
+        d_real = d_real + d_r.item()
+        d_fake = d_fake + d_f.item()
 
-        d_adv += d_r + d_f
+        d_adv = d_adv + d_r + d_f
 
     return d_adv, {'real loss': d_real, 'fake_loss': d_fake}
 
@@ -32,12 +32,12 @@ def get_g_loss(disc, y_fake, y_real, lambda_fm=2):
 
     g_adv = 0
     for d_out_f in d_out_fake:
-        g_adv += torch.mean((d_out_f - 1) ** 2)
+        g_adv = g_adv + torch.mean((d_out_f - 1) ** 2)
 
     g_fm = 0
     for ft_real_, ft_fake_ in zip(d_ft_real, d_ft_fake):
         for ft_r, ft_f in zip(ft_real_, ft_fake_):
-            g_fm += F.l1_loss(ft_f, ft_r, reduction='mean')
+            g_fm = g_fm + F.l1_loss(ft_f, ft_r, reduction='mean')
 
     g_loss = g_adv + lambda_fm * g_fm
     return g_loss, {'g_adv': g_adv.item(), 'g_fm': g_fm.item()}

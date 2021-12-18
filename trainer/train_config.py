@@ -12,6 +12,7 @@ class TrainConfig:
     val_split: float = None
 
     n_epochs: int = 50
+    overfit: bool = False
     lr: float = 3e-4
     save_dir: str = 'saved/'
 
