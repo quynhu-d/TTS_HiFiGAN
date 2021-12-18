@@ -64,10 +64,10 @@ def train(
     if logging:
         wandb.init(project=train_config.wandb_project, name=train_config.wandb_name)
 
-    for i in trange(train_config.n_epochs):
-        for j, batch in tqdm(
+    for epoch in trange(train_config.n_epochs):
+        for step, batch in tqdm(
                 enumerate(train_dataloader), total=len(train_dataloader),
-                leave=False, desc='EPOCH %d' % i
+                leave=False, desc='EPOCH %d' % epoch
         ):
             batch.to(device)
             batch.mel = featurizer(batch.waveform).to(device)
@@ -110,7 +110,7 @@ def train(
             g_loss.backward()
             opt_g.step()
 
-            if logging and ((i % train_config.display_step) == 0):
+            if logging and (step % train_config.display_step == 0):
                 mel_fake = featurizer(y_fake)
                 idx = np.random.randint(batch.mel.shape[0])
                 buf_true = plot_spectrogram_to_buf(batch.mel[idx].detach().cpu().numpy())
@@ -122,7 +122,7 @@ def train(
                 wandb.log({
                     'g_loss': g_loss,
 
-                    'g_mel_loss': g_mel_loss,
+                    'mel_loss': g_mel_loss,
                     'g_adv_loss': g_mpd_losses['g_adv'] + g_msd_losses['g_adv'],
                     'g_fm_loss': g_mpd_losses['g_fm'] + g_msd_losses['g_fm'],
 
@@ -148,11 +148,22 @@ def train(
                         batch.waveform[idx].detach().cpu().numpy(), sample_rate=MelSpectrogramConfig.sr
                     ),
                     'audio_pred': wandb.Audio(y_fake[idx].detach().cpu().numpy(), sample_rate=MelSpectrogramConfig.sr),
-                    'step': j
+                    'step': step
                 })
+
+            if step % 100 == 0:
+                # MODEL SAVING
+                torch.save(gen.state_dict(), model_path + '/gen.pth')
+                torch.save(mpd.state_dict(), model_path + '/mpd.pth')
+                torch.save(msd.state_dict(), model_path + '/msd.pth')
+
             if train_config.overfit:
                 break
         sch_g.step()
         sch_d.step()
+
+    torch.save(gen.state_dict(), model_path + '/gen.pth')
+    torch.save(mpd.state_dict(), model_path + '/mpd.pth')
+    torch.save(msd.state_dict(), model_path + '/msd.pth')
 
     return gen, mpd, msd
