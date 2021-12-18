@@ -1,97 +1,151 @@
-import numpy as np
+import PIL
 import torch
 import torch.nn.functional as F
 import wandb
 from torch.utils.data import DataLoader
-from data import LJSpeechDataset, LJSpeechCollator
-from featurizer import MelSpectrogramConfig, MelSpectrogram
-from models import *
+from torchvision.transforms import ToTensor
+from tqdm.auto import trange, tqdm
 import errno
 import os
-from typing import Tuple
-from tqdm.auto import tqdm, trange
-from .utils import plot_spectrogram_to_buf
-import PIL
-from torchvision.transforms import ToTensor
+
+from data import *
+from featurizer import *
+from loss import get_d_loss, get_g_loss, get_mel_loss
+from models import Generator, MPDiscriminator, MSDiscriminator, pad
+from trainer.utils import plot_spectrogram_to_buf
+from trainer.train_config import TrainConfig
 
 
 def train(
+        train_config: TrainConfig,
         mel_config: MelSpectrogramConfig,
-        lj_path: str,
-        n_epochs: int = 6000,
-        logging: bool = False,
-        overfit: bool = False,
-        model_cp_path: str = None,
-        wandb_resume: Tuple[str, str] = (None, None)    # resume mode and run id
+        logging: bool = True
 ):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print('Training on', device)
+
     try:
         train_dataloader = DataLoader(
-            LJSpeechDataset(lj_path), batch_size=16, collate_fn=LJSpeechCollator()
+            LJSpeechDataset(train_config.lj_path), batch_size=train_config.batch_size, collate_fn=LJSpeechCollator()
         )
     except errno:
-        raise "No dataset found at %s" % lj_path
+        raise "No dataset found at %s" % train_config.lj_path
 
-    # if not os.path.exists(train_config.save_dir):
-    #     os.mkdir(train_config.save_dir)
-    # import time
-    # model_path = train_config.save_dir + '/%s/' % (time.strftime("%d-%m-%I-%M-%S"))
-    # os.mkdir(model_path)
-    # print('Saving model at %s' % model_path)
-    model = Generator(80, 128).to(device)
-    model.train()
-    if overfit:
-        batch = next(iter(train_dataloader))
-    print(model)
-    opt_g = torch.optim.AdamW(model.parameters(), 2e-4, (.8, .99), weight_decay=.01)
-    sch_g = torch.optim.lr_scheduler.ExponentialLR(opt_g, gamma=.999, last_epoch=-1)
+    if not os.path.exists(train_config.save_dir):
+        os.mkdir(train_config.save_dir)
+    import time
+    model_path = train_config.save_dir + '/%s/' % (time.strftime("%d-%m-%I-%M-%S"))
+    os.mkdir(model_path)
+    print('Saving model at %s' % model_path)
+
+    featurizer = MelSpectrogram(mel_config).to(device)
+
+    gen = Generator(mel_config.n_mels, 512).to(device)
+    if train_config.model_cp_path is not None and (train_config.last_epoch != -1):
+        gen.load_state_dict(torch.load(train_config.model_cp_path + 'gen.pth', device))
+    gen.train()
+    print('Generator model', gen, sep='\n')
+
+    mpd = MPDiscriminator
+    if train_config.model_cp_path is not None and (train_config.last_epoch != -1):
+        mpd.load_state_dict(torch.load(train_config.model_cp_path + 'mpd.pth', device))
+    mpd.train()
+    print('MPD model', mpd, sep='\n')
+    msd = MSDiscriminator
+    if train_config.model_cp_path is not None and (train_config.last_epoch != -1):
+        msd.load_state_dict(torch.load(train_config.model_cp_path + 'msd.pth', device))
+    msd.train()
+    print('MSD model', msd, sep='\n')
+
+    opt_g = torch.optim.AdamW(gen.parameters(), 2e-4, (.8, .99), weight_decay=.01)
+    sch_g = torch.optim.lr_scheduler.ExponentialLR(opt_g, gamma=.999, last_epoch=train_config.last_epoch)
+
+    opt_d = torch.optim.AdamW(gen.parameters(), 2e-4, (.8, .99), weight_decay=.01)
+    sch_d = torch.optim.lr_scheduler.ExponentialLR(opt_g, gamma=.999, last_epoch=train_config.last_epoch)
+
     if logging:
-        wandb.init(project='TTS_HiFiGAN', name='overfit_generator')
-    featurizer = MelSpectrogram(MelSpectrogramConfig()).to(device)
-    for i in trange(n_epochs):
-        for batch_ in train_dataloader:  # fixed batch above
-            if not overfit:
-                batch = batch_
-            batch.to(device)
-            opt_g.zero_grad()
-            batch.mel = featurizer(batch.waveform).to(device)
-            pred_wav = model(batch.mel)
-            # print(pred_wav.size(), batch.mel.size())
-            # print(featurizer(pred_wav).shape)
+        wandb.init(project=train_config.wandb_project, name=train_config.wandb_name)
 
-            sz_diff = np.abs(batch.waveform.size(-1) - pred_wav.size(-1))
-            if sz_diff != 0:
-                if batch.waveform.size(-1) > pred_wav.size(-1):
-                    # print('padding waveform')
-                    pred_wav = F.pad(pred_wav, (0, sz_diff))
-                    true_wav = batch.waveform
-                else:
-                    # print('padding batch')
-                    true_wav = F.pad(batch.waveform, (0, sz_diff))
-                # batch.mel = featurizer(batch.waveform)
-            # print(batch.waveform.shape, pred_wav.shape)
-            assert true_wav.shape == pred_wav.shape
-            pred_mel = featurizer(pred_wav)
-            mel_loss = F.l1_loss(pred_mel, featurizer(true_wav)) * 45
-            mel_loss.backward()
+    for i in trange(train_config.n_epochs):
+        for j, batch in tqdm(
+                enumerate(train_dataloader), total=len(train_dataloader),
+                leave=False, desc='EPOCH %d' % i
+        ):
+            batch.to(device)
+            batch.mel = featurizer(batch.waveform).to(device)
+            y_fake = gen(batch.mel)
+            y_fake, y_real = pad(y_fake, y_real)
+
+            # Discriminators
+            opt_d.zero_grad()
+            # MPD
+            mpd.requires_grad = True
+            mpd_loss, mpd_losses = get_d_loss(mpd, y_fake, y_real)
+
+            # MSD
+            msd.requires_grad = True
+            msd_loss, msd_losses = get_d_loss(msd, y_fake, y_real)
+
+            d_loss = mpd_loss + msd_loss
+            d_loss.backward()
+            opt_d.step()
+
+            # Generator
+            opt_g.zero_grad()
+
+            # MPD
+            mpd.requires_grad = False
+            g_mpd_loss, g_mpd_losses = get_g_loss(mpd, y_fake, y_real)
+
+            # MSD
+            msd.requires_grad = False
+            g_msd_loss, g_msd_losses = get_g_loss(msd, y_fake, y_real)
+
+            g_mel_loss = get_mel_loss(y_fake, y_real)
+
+            g_loss = g_mpd_loss + g_msd_loss + g_mel_loss * 45
+            g_loss.backward()
             opt_g.step()
 
-            idx = np.random.randint(batch.mel.shape[0])
-            if logging:
-                wandb_mel_true = ToTensor()(PIL.Image.open(plot_spectrogram_to_buf(batch.mel[idx])))
-                wandb_mel_pred = ToTensor()(PIL.Image.open(plot_spectrogram_to_buf(pred_mel[idx])))
+            if logging and ((i % train_config.display_step) == 0):
+                mel_fake = featurizer(y_fake)
+                idx = np.random.randint(batch.mel.shape[0])
+                buf_true = plot_spectrogram_to_buf(batch.mel[idx].detach().cpu().numpy())
+                buf_pred = plot_spectrogram_to_buf(mel_fake[idx].detach().cpu().numpy())
+                wandb_mel_real = ToTensor()(PIL.Image.open(buf_true))
+                wandb_mel_fake = ToTensor()(PIL.Image.open(buf_pred))
+                del buf_pred
+                del buf_true
                 wandb.log({
-                    'mel_loss': mel_loss,
-                    'mel': wandb.Image(wandb_mel_true),
-                    'mel_pred': wandb.Image(wandb_mel_pred),
-                    'audio': wandb.Audio(batch.waveform[idx].detach().cpu().numpy(),
-                                         sample_rate=MelSpectrogramConfig.sr),
-                    'audio_pred': wandb.Audio(pred_wav[idx].detach().cpu().numpy(),
-                                              sample_rate=MelSpectrogramConfig.sr),
-                    'step': i
+                    'g_loss': g_loss,
+
+                    'g_mel_loss': g_mel_loss,
+                    'g_adv_loss': g_mpd_losses['g_adv'] + g_msd_losses['g_adv'],
+                    'g_fm_loss': g_mpd_losses['g_fm'] + g_msd_losses['g_fm'],
+
+                    'g_mpd_adv_loss': g_mpd_losses['g_adv'],
+                    'g_mpd_fm_loss': g_mpd_losses['g_fm'],
+
+                    'g_msd_adv_loss': g_msd_losses['g_adv'],
+                    'g_msd_fm_loss': g_msd_losses['g_fm'],
+
+                    'd_loss': d_loss.item(),
+
+                    'mpd_loss': mpd_loss.item(),
+                    'mpd_real': mpd_losses['real_loss'],
+                    'mpd_fake': mpd_losses['fake_loss'],
+
+                    'msd_loss': msd_loss.item(),
+                    'msd_real': msd_losses['real_loss'],
+                    'msd_fake': msd_losses['fake_loss'],
+
+                    'mel': wandb.Image(wandb_mel_real),
+                    'mel_pred': wandb.Image(wandb_mel_fake),
+                    'audio': wandb.Audio(
+                        batch.waveform[idx].detach().cpu().numpy(), sample_rate=MelSpectrogramConfig.sr
+                    ),
+                    'audio_pred': wandb.Audio(y_fake[idx].detach().cpu().numpy(), sample_rate=MelSpectrogramConfig.sr),
+                    'step': j
                 })
-            if overfit:
-                break
+            break
         sch_g.step()
-    return model
+        sch_d.step()
