@@ -56,8 +56,8 @@ class MSDiscriminator(nn.Module):
             leaky_relu_slope: float = .1
     ):
         super(MSDiscriminator, self).__init__()
-        self.disc_layers = nn.ModuleList([MSDSub(use_spectral=True)])
-        self.disc_layers.extend([MSDSub() for _ in range(n_discs - 1)])
+        self.disc_layers = nn.ModuleList([MSDSub(leaky_relu_slope, use_spectral=True)])
+        self.disc_layers.extend([MSDSub(leaky_relu_slope) for _ in range(n_discs - 1)])
         self.pooling = nn.AvgPool1d(4, stride=2, padding=1, count_include_pad=False)
 
     def forward(self, x, return_ft=True):
@@ -77,6 +77,11 @@ class MSDiscriminator(nn.Module):
             return outputs, ft_maps
         else:
             return outputs
+
+    def to(self, device):
+        for disc in self.disc_layers:
+            disc.to(device)
+        self.pooling.to(device)
 
 
 class MPDSub(nn.Module):
@@ -158,6 +163,10 @@ class MPDiscriminator(nn.Module):
         else:
             return outputs
 
+    def to(self, device):
+        for disc in self.disc_layers:
+            disc.to(device)
+
 
 if __name__ == '__main__':
     x = torch.randn(3, 400)
@@ -165,6 +174,8 @@ if __name__ == '__main__':
     print(dict(MPDiscriminator().named_parameters()).keys())
     print(MSDiscriminator())
     print(dict(MSDiscriminator().named_parameters()).keys())
+    MSDiscriminator().to('cpu')
+    MPDiscriminator().to('cpu')
     output_s, ft_maps_s = MSDiscriminator()(x)
     output_p, ft_maps_p = MPDiscriminator()(x)
 
