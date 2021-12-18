@@ -61,8 +61,9 @@ def train(
     opt_d = torch.optim.AdamW(gen.parameters(), 2e-4, (.8, .99), weight_decay=.01)
     sch_d = torch.optim.lr_scheduler.ExponentialLR(opt_g, gamma=.999, last_epoch=train_config.last_epoch)
 
+    total_config = {**train_config.__dict__, **mel_config.__dict__}
     if logging:
-        wandb.init(project=train_config.wandb_project, name=train_config.wandb_name)
+        wandb.init(project=train_config.wandb_project, name=train_config.wandb_name, config=total_config)
 
     for epoch in trange(train_config.n_epochs):
         for step, batch in tqdm(
