@@ -1,8 +1,19 @@
 from typing import List
 
+import numpy as np
+import torch
 import torch.nn.functional as F
 from torch import nn
-import torch
+
+
+def pad(y_fake, y_real):
+    """ for generator output and ground truth padding"""
+    sz_diff = np.abs(y_real.size(-1) - y_fake.size(-1))
+    if sz_diff != 0:
+        if y_real.size(-1) > y_fake.size(-1):
+            return F.pad(y_fake, (0, sz_diff)), y_real
+        else:
+            return y_fake, F.pad(y_real, (0, sz_diff))
 
 
 class ResBlock(nn.Module):
