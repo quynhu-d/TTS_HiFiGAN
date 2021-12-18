@@ -6,7 +6,7 @@ from models import *
 from data import Batch
 
 
-def get_d_loss(disc, y_fake, y_real, device='cpu'):
+def get_d_loss(disc, y_fake, y_real):
     y_fake = y_fake.detach()
 
     d_out_real = disc(y_real, return_ft=False)
@@ -26,12 +26,7 @@ def get_d_loss(disc, y_fake, y_real, device='cpu'):
     return d_adv, {'real loss': d_real, 'fake_loss': d_fake}
 
 
-def get_g_loss(disc, y_fake, y_real, lambda_fm=2, device='cpu'):
-    # y_fake = gen(batch.mel)
-
-    # # padding
-    # y_fake, y_real = pad(y_fake, batch.waveform)
-
+def get_g_loss(disc, y_fake, y_real, lambda_fm=2):
     d_out_real, d_ft_real = disc(y_real)
     d_out_fake, d_ft_fake = disc(y_fake)
 

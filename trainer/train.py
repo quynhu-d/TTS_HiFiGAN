@@ -73,6 +73,7 @@ def train(
             batch.mel = featurizer(batch.waveform).to(device)
             y_fake = gen(batch.mel)
             y_fake, y_real = pad(y_fake, batch.waveform)
+            y_fake, y_real = y_fake.to(device), y_real.to(device)
 
             # Discriminators
             opt_d.zero_grad()
