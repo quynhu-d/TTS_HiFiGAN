@@ -71,11 +71,12 @@ def train(
         ):
             batch.to(device)
             batch.mel = featurizer(batch.waveform).to(device)
+
+            # Discriminators
             y_fake = gen(batch.mel)
             y_fake, y_real = pad(y_fake, batch.waveform)
             y_fake, y_real = y_fake.to(device), y_real.to(device)
 
-            # Discriminators
             opt_d.zero_grad()
             # MPD
             mpd.requires_grad = True
@@ -90,6 +91,9 @@ def train(
             opt_d.step()
 
             # Generator
+            y_fake = gen(batch.mel)
+            y_fake, y_real = pad(y_fake, batch.waveform)
+            y_fake, y_real = y_fake.to(device), y_real.to(device)
             opt_g.zero_grad()
 
             # MPD
