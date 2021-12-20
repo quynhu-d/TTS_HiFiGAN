@@ -60,7 +60,7 @@ class TimeStretch(AugmentationBase):
     def __call__(self, data: Tensor):
         rate = np.random.uniform(self.min_rate, self.max_rate)    # choose random rate from given range
         x = data.type(torch.complex128)
-        return self._aug(x, rate).type(torch.float64)
+        return self._aug(x, rate).type(torch.double)
 
 
 if __name__ == '__main__':
