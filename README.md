@@ -9,6 +9,7 @@
     ├── models                  # HiFiGAN (Generator and MP and MS Discriminators)
     ├── trainer                 # training functions
     ├── test.py                 # test function
+    ├── test_models.sh          # test final models
     └── requirements.txt
 
 ## Logs
@@ -65,3 +66,6 @@ The function returns reconstructed wavs, their spectrograms and original spectro
 Get models from google drive files ([model 1 (without augs)](https://drive.google.com/uc?export=download&id=1-Bfq72aa6ZtOt5rEsUJBHoDRT2X6YovL), [model 2 (with augs)](https://drive.google.com/uc?export=download&id=1-jUnywvuAc-qJ0nUKo6mPteYIbIiDiZM)):
 
     wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=FILEID' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=FILEID" -O FILENAME && rm -rf /tmp/cookies.txt
+
+## Test
+Run `test_models.sh` to test final models.
