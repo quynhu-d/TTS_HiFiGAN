@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
+from featurizer import MelSpectrogramConfig
 
 
 def pad(y_fake, y_real):
@@ -129,6 +130,16 @@ class Generator(nn.Module):
         return x.squeeze(1)
 
 
+def get_generator(version: int = 1, n_mels: int = MelSpectrogramConfig.n_mels):
+    assert version in [1, 2, 3]
+    if version == 1:
+        return Generator(n_mels)
+    if version == 2:
+        return Generator(n_mels, 128)
+    if version == 3:
+        return Generator(n_mels, 256, [16, 16, 8], [3, 5, 7], [[[1], [2]], [[2], [6]], [[3], [12]]])
+
+
 if __name__ == '__main__':
     a = torch.randn(1, 80, 400)
     # resblock = ResBlock(80, 3, [[1, 1], [3, 1], [5, 1]])
@@ -140,7 +151,13 @@ if __name__ == '__main__':
     # print(mrf)
     # print(dict(mrf.named_parameters()).keys())
     # print(mrf(a).shape)
-
+    for i in [1, 2, 3]:
+        try:
+            model = get_generator(i, 80)
+            print(dict(model.named_parameters()).keys())
+            model(a)
+        except:
+            raise
     model = Generator(80)
     print(model)
     print(dict(model.named_parameters()).keys())

@@ -11,6 +11,8 @@ class TrainConfig:
     batch_size: int = 16
     val_split: float = None
 
+    gen_version: int = 1
+
     n_epochs: int = 50
     overfit: bool = False
     lr: float = 3e-4

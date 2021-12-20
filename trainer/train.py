@@ -12,7 +12,7 @@ from tqdm.auto import trange, tqdm
 from data import *
 from featurizer import *
 from loss import get_d_loss, get_g_loss, get_mel_loss
-from models import Generator, MPDiscriminator, MSDiscriminator, pad
+from models import Generator, MPDiscriminator, MSDiscriminator, pad, get_generator
 from trainer.train_config import TrainConfig
 from trainer.utils import plot_spectrogram_to_buf
 
@@ -41,7 +41,7 @@ def train(
 
     featurizer = MelSpectrogram(mel_config).to(device)
 
-    gen = Generator(mel_config.n_mels, 512).to(device)
+    gen = get_generator(train_config.gen_version, mel_config.n_mels).to(device)
     if train_config.model_cp_path is not None and (train_config.last_epoch != -1):
         gen.load_state_dict(torch.load(train_config.model_cp_path + 'gen.pth', device))
     gen.train()
