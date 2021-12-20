@@ -20,7 +20,7 @@ class SequentialAugmentation(AugmentationBase):
 
 
 class RandomApply:
-    def __init__(self, augmentation: Callable, p: float):
+    def __init__(self, augmentation: Callable, p: float = .5):
         assert 0 <= p <= 1
         self.augmentation = augmentation
         self.p = p
@@ -37,8 +37,8 @@ class FrequencyMasking(AugmentationBase):
         self._aug = torchaudio.transforms.FrequencyMasking(*args, **kwargs)
 
     def __call__(self, data: Tensor):
-        x = data.unsqueeze(1)    # time-first
-        return self._aug(x).squeeze(1)    # time-first
+        x = data.unsqueeze(1)
+        return self._aug(x).squeeze(1)
 
 
 class TimeMasking(AugmentationBase):
@@ -46,8 +46,8 @@ class TimeMasking(AugmentationBase):
         self._aug = torchaudio.transforms.TimeMasking(*args, **kwargs)
 
     def __call__(self, data: Tensor):
-        x = data.unsqueeze(1)    # time-first
-        return self._aug(x).squeeze(1)    # time-first
+        x = data.unsqueeze(1)
+        return self._aug(x).squeeze(1)
 
 
 class TimeStretch(AugmentationBase):
