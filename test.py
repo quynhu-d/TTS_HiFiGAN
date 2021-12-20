@@ -32,7 +32,7 @@ def test(
     for wav_file in wav_files:
         if wav_file.find('.wav') == -1:
             continue
-        wavs.append(torchaudio.load(wav_dir + wav_file)[0])
+        wavs.append(torchaudio.load(wav_dir + '/' + wav_file)[0])
         wav_lengths.append(len(wavs[-1]))
         mels.append(featurizer(wavs[-1]))
         with torch.no_grad():
@@ -41,7 +41,7 @@ def test(
         if test_save_dir is not None:
             if not os.path.exists(test_save_dir):
                 os.mkdir(test_save_dir)
-            torchaudio.save(test_save_dir + wav_file, reconstructed_wavs[-1], sample_rate=mel_config.sr)
+            torchaudio.save(test_save_dir + '/' + wav_file, reconstructed_wavs[-1], sample_rate=mel_config.sr)
     return (reconstructed_wavs, reconstructed_mels), mels
 
 
