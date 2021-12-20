@@ -6,6 +6,7 @@ import torchaudio
 from torch import Tensor
 
 from augmentations.base import AugmentationBase
+from featurizer import MelSpectrogramConfig
 
 
 class SequentialAugmentation(AugmentationBase):
@@ -19,7 +20,7 @@ class SequentialAugmentation(AugmentationBase):
         return x
 
 
-class RandomApply:
+class RandomApply(AugmentationBase):
     def __init__(self, augmentation: Callable, p: float = .5):
         assert 0 <= p <= 1
         self.augmentation = augmentation
@@ -38,7 +39,7 @@ class FrequencyMasking(AugmentationBase):
 
     def __call__(self, data: Tensor):
         x = data.unsqueeze(1)
-        return self._aug(x).squeeze(1)
+        return self._aug(x, mask_value=MelSpectrogramConfig.pad_value).squeeze(1)
 
 
 class TimeMasking(AugmentationBase):
@@ -47,7 +48,7 @@ class TimeMasking(AugmentationBase):
 
     def __call__(self, data: Tensor):
         x = data.unsqueeze(1)
-        return self._aug(x).squeeze(1)
+        return self._aug(x, mask_value=MelSpectrogramConfig.pad_value).squeeze(1)
 
 
 class TimeStretch(AugmentationBase):
@@ -64,5 +65,5 @@ class TimeStretch(AugmentationBase):
 
 if __name__ == '__main__':
     spec = torch.randn(3, 80, 400)
-    print(TimeStretch(n_freq=80, min_rate=.8, max_rate=1.2)(spec).shape)
+    print(RandomApply(TimeStretch(n_freq=80, min_rate=.8, max_rate=1.2))(spec).shape)
     print(TimeMasking(50)(spec))

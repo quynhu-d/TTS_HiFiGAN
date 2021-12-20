@@ -1,6 +1,7 @@
 import errno
 import itertools
 import os
+from typing import Callable
 
 import wandb
 from PIL import Image
@@ -19,6 +20,7 @@ from trainer.utils import plot_spectrogram_to_buf
 def train(
         train_config: TrainConfig,
         mel_config: MelSpectrogramConfig = MelSpectrogramConfig(),
+        mel_aug: Callable = None,
         logging: bool = True
 ):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -78,8 +80,10 @@ def train(
                 leave=False, desc='EPOCH %d' % epoch
         ):
             batch.to(device)
-            batch.mel = featurizer(batch.waveform).to(device)
-
+            if mel_aug is not None:
+                batch.mel = mel_aug(featurizer(batch.waveform)).to(device)
+            else:
+                batch.mel = featurizer(batch.waveform).to(device)
             # Discriminators
             y_fake = gen(batch.mel)
             y_fake, y_real = pad(y_fake, batch.waveform)
