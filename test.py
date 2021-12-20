@@ -5,17 +5,18 @@ import torch
 import torchaudio
 
 from featurizer import MelSpectrogram, MelSpectrogramConfig
-from models import Generator
+from models import Generator, get_generator
 
 
 def test(
         model_path: str,
         wav_dir: str,    # directory of test files
+        model_version: int = 1,
         mel_config: MelSpectrogramConfig = MelSpectrogramConfig(),
         test_save_dir: str = None
 ):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    gen = Generator(80, 512)
+    gen = get_generator(model_version, mel_config.n_mels)
     gen.load_state_dict(torch.load(model_path, device))
     gen.eval()
 
@@ -54,6 +55,13 @@ if __name__ == '__main__':
         help="generator model path (default: None)",
     )
     args.add_argument(
+        "-v",
+        "--version",
+        default=1,
+        type=int,
+        help="generator model version (default: 1)",
+    )
+    args.add_argument(
         "-d",
         "--data",
         default=None,
@@ -72,13 +80,10 @@ if __name__ == '__main__':
     model_path = arg_dict['model']
     wav_dir = arg_dict['data']
     test_save_dir = arg_dict['out']
-    # config = ConfigParser.from_args(args, options)
-    # main(config)
+    model_version = arg_dict['version']
     # transcript = [
-    #     "A defibrillator is a device that gives a high energy electric shock to the heart of someone who is in cardiac arrest",
-    #     "Massachusetts Institute of Technology may be best known for its math, science and engineering education",
-    #     "Wasserstein distance or Kantorovich Rubinstein metric is a distance function defined between probability distributions on a given metric space"
+    # "A defibrillator is a device that gives a high energy electric shock to the heart of someone who is in cardiac arrest",
+    # "Massachusetts Institute of Technology may be best known for its math, science and engineering education",
+    # "Wasserstein distance or Kantorovich Rubinstein metric is a distance function defined between probability distributions on a given metric space"
     # ]
-    # model_path = '../test_data/gen.pth'
-    # print(os.listdir('../test_data/'))
-    test(model_path, wav_dir, test_save_dir=test_save_dir)
+    test(model_path, wav_dir, model_version=model_version, test_save_dir=test_save_dir)
