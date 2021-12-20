@@ -59,3 +59,9 @@ The function returns reconstructed wavs, their spectrograms and original spectro
         '/content/drive/MyDrive/TTS_HiFiGAN/saved/20-12-11-10-36/gen.pth',
         '/content/drive/MyDrive/TTS_HiFiGAN/test_data/'
     )
+
+## Model checkpoints
+
+Get models from google drive files ([model 1 (without augs)](https://drive.google.com/uc?export=download&id=1-Bfq72aa6ZtOt5rEsUJBHoDRT2X6YovL), [model 2 (with augs)](https://drive.google.com/uc?export=download&id=1-jUnywvuAc-qJ0nUKo6mPteYIbIiDiZM)):
+
+    wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=FILEID' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=FILEID" -O FILENAME && rm -rf /tmp/cookies.txt
