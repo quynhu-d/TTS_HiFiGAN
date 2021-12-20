@@ -1,9 +1,35 @@
+from typing import List, Callable
+
 import numpy as np
 import torch
 import torchaudio
 from torch import Tensor
 
 from augmentations.base import AugmentationBase
+
+
+class SequentialAugmentation(AugmentationBase):
+    def __init__(self, augmentation_list: List[Callable]):
+        self.augmentation_list = augmentation_list
+
+    def __call__(self, data: Tensor) -> Tensor:
+        x = data
+        for augmentation in self.augmentation_list:
+            x = augmentation(x)
+        return x
+
+
+class RandomApply:
+    def __init__(self, augmentation: Callable, p: float):
+        assert 0 <= p <= 1
+        self.augmentation = augmentation
+        self.p = p
+
+    def __call__(self, data: Tensor) -> Tensor:
+        if np.random.random() < self.p:
+            return self.augmentation(data)
+        else:
+            return data
 
 
 class FrequencyMasking(AugmentationBase):
