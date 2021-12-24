@@ -40,6 +40,7 @@ Optional parameters:
     train_config = TrainConfig()
     mel_config = MelSpectrogramConfig()
     train(train_config, mel_config)
+    
 > To continue training from checkpoint, define `model_cp_path` and set `last_epoch` in TrainConfig.
 
 ## Inference
