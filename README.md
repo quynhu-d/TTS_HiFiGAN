@@ -34,7 +34,6 @@ Optional parameters:
 - PyTorch optimizers and schedulers (by default AdamW and ExponentialLR are set as in paper)
 - logging: set to False to disable (wandb) logging
 
-
     from featurizer import MelSpectrogramConfig
     from trainer import TrainConfig, train
 
